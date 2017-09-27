@@ -13,7 +13,8 @@ rollOff = 0.3;                           % Roll off factor for RRC-pulse
 span = 2;                                % Truncation of pulse
 const = [(1 + 1i) (1 - 1i) ...           % Constellation for 4-QAM. Divide by sqrt(2) for unit energy
         (-1 -1i) (-1 + 1i)]/sqrt(2);     
-%preamble = [1 1 1 -1 -1 1 -1];
+preamble = [1 1 1 -1 -1 1 -1];
+TESTESTSTEST
 preamble = [];
 
 % Noise and synchronization errors for simulation
