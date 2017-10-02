@@ -3,7 +3,8 @@ clc
 clf
 clear all
 close all
-
+profile on
+ 
 % Parameters to edit
 fc = 5000;                               % Carrier frequency [Hz]
 N = 432;                                 % Number of bits
