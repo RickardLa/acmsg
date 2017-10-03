@@ -21,7 +21,7 @@ preamble = [1 1 1 -1 -1 1 -1];
 SNR = -10;                               % Signal-to-noise ratio [dB]
 phiError = 0;                            % Add phase error
 fcError = 0;                              % Add frequency error
-tError = randi([1,100],1)                % Random time delay for frame synch
+tError = randi([1,100],1);                % Random time delay for frame synch
 %tError = 0;
 % Declare additional parameters
 fsy = Rb/2;                              % Symbol frequency [symbols/s]
