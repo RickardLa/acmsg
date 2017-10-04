@@ -11,18 +11,20 @@ N = 432;                                 % Number of bits
 fs = 44000;                              % Sampling frequency [samples/s]
 Rb = 440;                                % Bit rate [bit/s]
 rollOff = 0.3;                           % Roll off factor for RRC-pulse
-span = 2;                                % Truncation of pulse
+span = 6;                                % Truncation of pulse
 const = [(1 + 1i) (1 - 1i) ...           % Constellation for 4-QAM. Divide by sqrt(2) for unit energy
     (-1 -1i) (-1 + 1i)]/sqrt(2);
-preamble = [1 1 1 -1 -1 1 -1];
-%preamble = [];
+%preamble = [1 1 1 -1 -1 1 -1];
+preamble = [];
+pilot = ones(1,20);
+%pilot = [];
 
 % Noise and synchronization errors for simulation
-SNR = -10;                               % Signal-to-noise ratio [dB]
-phiError = 0;                            % Add phase error
+SNR = 100;                               % Signal-to-noise ratio [dB]
+phiError = pi;                            % Add phase error
 fcError = 0;                              % Add frequency error
-tError = randi([1,100],1);                % Random time delay for frame synch
-%tError = 0;
+%tError = randi([1,100],1);                % Random time delay for frame synch
+tError = 0;
 % Declare additional parameters
 fsy = Rb/2;                              % Symbol frequency [symbols/s]
 Tsy = 1/fsy;                             % Symbol time/period [s/symbols]
@@ -34,7 +36,7 @@ pulse = rtrcpuls(rollOff,Tsy,fs,span);   % Generate pulse using rtrcpuls()
 bitstream = randsrc(N,1,[0 1]);               % Generates column-vector with bits
 message = buffer(bitstream,N/2);              % Buffers bitstream into data frames with length 2
 messageIdx = bi2de(message, 'left-msb')+1;    % Convert data frames to decimal. Adding 1 for correct matrix-indexing
-map = [zeros(1,tError) preamble const(messageIdx)];                      % Map each data frame to a constellation point
+map = [zeros(1,tError) preamble pilot const(messageIdx)];                      % Map each data frame to a constellation point
 
 % Upsample map and convolve with RRC-pulse
 mapUP = upsample(map,fsfsy);                  % Space the data fsfsy-apart to sample once per symbol
