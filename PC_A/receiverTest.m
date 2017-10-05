@@ -4,35 +4,40 @@ fc = 5000;                               % Carrier frequency [Hz]
 N = 432;                                 % Number of bits
 fs = 44000;                              % Sampling frequency [samples/s]
 Rb = 440;                                % Bit rate [bit/s]
-const = [(1 + 1i) (1 - 1i) ...           % Constellation for 4-QAM.
+constQAM = [(1 + 1i) (1 - 1i) ...           % Constellation for 4-QAM.
     (-1 -1i) (-1 + 1i)]/sqrt(2);     % Divide by sqrt(2) for unit energy
-preamble = [1 1 1 -1 -1 1 -1];
-pilot = ones(1,20);
+constBPSK = [1 -1];
+preamble = [1 1 1 0 0 1 0];
+pLength = length(preamble);
 
-preLength = length(preamble);
-pLength = length(pilot);
 % Declare additional parameters
 fsy = Rb/2;                              % Symbol frequency [symbols/s]
 Tsy = 1/fsy;                             % Symbol time/period [s/symbols]
 Ts = 1/fs;                               % Sampling time/period [s/sample]
 fsfsy = fs/fsy;                          % Used for upsampling [samples/symbols]
-pilotUP = upsample(pilot,fsfsy);
 
+
+% Map preamble to constBPSK 
+preambleIdx = bi2de(preamble', 'left-msb')+1;
+preambleMap = constBPSK(preambleIdx);
+preambleUP = upsample(preambleMap,fsfsy);
+preamblePulse = conv(pulse,preambleUP);
+% stem(preamblePulse)
+% figure;
 % Demodulate signal
 t = (0:length(RxSignal)-1)*Ts;           % Signal contains samples. Multiplying by the sampling time gives the time of the signal
 signalBase = RxSignal.*cos(2*pi*fc.*t);  % Passband to baseband
 
+MF = conv(pulse, RxSignal); 
 % Phase and frequency synchronization
-crosscorr = conv(real(signalBase), fliplr(pilotUP));
-[peak, index] = max(abs(crosscorr));    
-plot(crosscorr,'-r')
-if peak > 5                                              % Set threshold
-    tStart = index - length(pilotUP);                         
-    pilot1 = signalBase(tStart:tStart+length(pilotUP));
-    fourier = fft(pilot1);
-    tmpFourier = [real(fourier) imag(fourier)];
-    phaseShift = wrapTo2Pi(angle(((mean(tmpFourier)))))
-    
+crosscorr = conv(MF, fliplr(preamblePulse));
+[peak, index] = max((crosscorr));    
+%plot(real(crosscorr),'-r')
+if peak > 4                                              % Set threshold
+    tStart = (index - length(preamblePulse));                         
+    data = MF(index+1:end);
+    data = downsample(data,fsfsy);
+    stem(real(data))
 else
     disp('Pilot not found')
 end
