@@ -1,107 +1,30 @@
-function [] = receiverTest(RxSignal,pulse)
-% Parameters to edit
-fc = 5000;                               % Carrier frequency [Hz]
-N = 432;                                 % Number of bits
-fs = 44000;                              % Sampling frequency [samples/s]
-Rb = 440;                                % Bit rate [bit/s]
-constQAM = [(1 + 1i) (1 - 1i) ...           % Constellation for 4-QAM.
-    (-1 -1i) (-1 + 1i)]/sqrt(2);     % Divide by sqrt(2) for unit energy
-constBPSK = [1 -1];
-preamble = [1 1 1 0 0 1 0];
-pLength = length(preamble);
+function [] = receiverTest(RxSignal)
 
-% Declare additional parameters
-fsy = Rb/2;                              % Symbol frequency [symbols/s]
-Tsy = 1/fsy;                             % Symbol time/period [s/symbols]
-Ts = 1/fs;                               % Sampling time/period [s/sample]
-fsfsy = fs/fsy;                          % Used for upsampling [samples/symbols]
+run('commonParameters.m')
 
-
-% Map preamble to constBPSK 
-preambleIdx = bi2de(preamble', 'left-msb')+1;
-preambleMap = constBPSK(preambleIdx);
-preambleUP = upsample(preambleMap,fsfsy);
-preamblePulse = conv(pulse,preambleUP);
-% stem(preamblePulse)
-% figure;
 % Demodulate signal
 t = (0:length(RxSignal)-1)*Ts;           % Signal contains samples. Multiplying by the sampling time gives the time of the signal
 signalBase = RxSignal.*cos(2*pi*fc.*t);  % Passband to baseband
 
-MF = conv(pulse, RxSignal); 
 % Phase and frequency synchronization
-crosscorr = conv(MF, fliplr(preamblePulse));
-[peak, index] = max((crosscorr));    
-%plot(real(crosscorr),'-r')
-if peak > 4                                              % Set threshold
-    tStart = (index - length(preamblePulse));                         
-    data = MF(index+1:end);
-    data = downsample(data,fsfsy);
-    stem(real(data))
-else
-    disp('Pilot not found')
-end
+crosscorr = conv(signalBase, fliplr(preamblePulse));
+[peak, index] = max(abs(crosscorr));    
+plot(real(crosscorr),'-r')
 
+    if peak > 250                                             % Set threshold
+        tStart = floor((index - length(preamblePulse)));
+        preamble = signalBase(tStart+1:index);
 
-% Filter baseband-signal with matched filter
-MF = fliplr(conj(pulse));
-MF_output = conv(MF, signalBase)/fsfsy;
-MF_output = MF_output(length(MF):end-length(MF)+1);
-signalDown = downsample(MF_output,fsfsy);
+        % Filter and downsample found preamble
+        MF = fliplr(conj(pulse));
+        MF_output = conv(MF, preamble)/fsfsy;
+        MF_output = MF_output(length(MF):end-length(MF)+1);
+        preambleDown = downsample(MF_output,fsfsy);
 
-
-% % Minimum Eucledian distance detector from EX 6
-% metric = abs(repmat(signalDown.',1,4) - repmat(const, length(signalDown), 1)).^2;   % compute the distance to each possible symbol
-% [tmp m_hat] = min(metric, [], 2);                                           % find the closest constellation point for each received symbol
-% a_hat_buffer = de2bi(m_hat-1, 2, 'left-msb')';                              % make symbols into bits
-% a_hat = a_hat_buffer(:)';                                                   % write as a vector
-
-
-% % Frame Synch
-% crosscorr = conv(real(signalDown), fliplr(preamble));
-% [peak, index] = max(crosscorr);                          % Find peak
-% plot(crosscorr,'.-b')
-% if peak > 2                                              % Set threshold
-%     tDelay = index - preLength;                            % Time delay 
-%     signalDown = signalDown(index+1:end);                % Remove delay and preamble
-%     %scatterplot(signalDown)
-% else
-%     disp('Preamble not found')
-% end
-
-%------------------------------------------------------------------------------
-% NOW THAT WE HAVE DECODED OUR MESSAGE; IT IS TIME TO SAVE THE DATA FOR THE GUI
-%------------------------------------------------------------------------------
-
-% % Step 1: save the estimated bits
-% recObj.UserData.pack = a_hat;
-% 
-% % Step 2: save the sampled symbols
-% recObj.UserData.const = rx_vec;
-% 
-% % Step 3: provide the matched filter output for the eye diagram
-% recObj.UserData.eyed.r = MF_output;
-% recObj.UserData.eyed.fsfd = fsfd;
-% 
-% % Step 4: Compute the PSD and save it. Note that it has to be computed on
-% % the BASE BAND signal BEFORE matched filtering
-% [pxx, f] = pwelch(received_signal,1024,768,1024, fs); % note that pwr_spect.f will be normalized frequencies
-% f = fftshift(f); %shift to be centered around fs
-% f(1:length(f)/2) = f(1:length(f)/2) - fs; % center to be around zero
-% p = fftshift(10*log10(pxx/max(pxx))); % shift, normalize and convert PSD to dB
-% recObj.UserData.pwr_spect.f = f;
-% recObj.UserData.pwr_spect.p = p;
-% 
-% % In order to make the GUI look at the data, we need to set the
-% % receive_complete flag equal to 1:
-% recObj.UserData.receive_complete = 1; 
-
-
-
-
-
-
-
-
+        % Time to find the phase
+        % stem(preambleDown)
+    else
+        disp('Pilot not found. Try changing threshold.')
+    end
 
 end
