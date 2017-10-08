@@ -22,6 +22,4 @@ pulse = rtrcpuls(rollOff,Tsy,fs,span);   % Generate pulse using rtrcpuls()
 preambleIdx = bi2de(preamble', 'left-msb')+1;
 preambleMap = constBPSK(preambleIdx);
 preambleUP = upsample(preambleMap,fsfsy);
-E = sum(abs(preamble).^2); 
-
-preamblePulse = conv(preambleUP,pulse)/E;
+preamblePulse = conv(preambleUP,pulse);
